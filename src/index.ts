@@ -1,0 +1,1 @@
+console.log("Sistema de retiradas iniciado com sucesso!");
