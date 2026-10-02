@@ -1,3 +1,7 @@
+// Este arquivo é GERADO a partir do banco via `npm run db:pull` (introspecção).
+// O DDL em db/init/ é a fonte da verdade — não use `prisma migrate dev`.
+// Os models serão preenchidos pelo db pull.
+
 generator client {
   provider = "prisma-client-js"
 }

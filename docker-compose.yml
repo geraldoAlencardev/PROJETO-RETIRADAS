@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: os-retirada-db
+    environment:
+      POSTGRES_DB: os_retirada
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Scripts .sql daqui rodam UMA vez, na criação do volume (ordem alfabética).
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  postgres_data:
