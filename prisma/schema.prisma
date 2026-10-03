@@ -1,7 +1,3 @@
-// Este arquivo é GERADO a partir do banco via `npm run db:pull` (introspecção).
-// O DDL em db/init/ é a fonte da verdade — não use `prisma migrate dev`.
-// Os models serão preenchidos pelo db pull.
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,4 +5,149 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model agendamento {
+  id                 String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  os_id              String                     @db.Uuid
+  usuario_id         String                     @db.Uuid
+  data_prevista      DateTime                   @db.Date
+  horario            DateTime?                  @db.Time(6)
+  data_hora_registro DateTime                   @default(now()) @db.Timestamp(6)
+  vigente            Boolean                    @default(true)
+  tipo_motivo        tipo_motivo_reagendamento?
+  motivo_detalhe     String?                    @db.VarChar(300)
+  os                 os                         @relation(fields: [os_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario            usuario                    @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([os_id], map: "ix_agendamento_os_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model feriado {
+  id              Int                 @id @default(autoincrement())
+  feriadosapi_id  String?             @unique @db.Uuid
+  data            DateTime            @db.Date
+  descricao       String              @db.VarChar(150)
+  abrangencia     abrangencia_feriado
+  sincronizado_em DateTime            @default(now()) @db.Timestamp(6)
+
+  @@index([data], map: "ix_feriado_data")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model historico_evento {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  os_id       String   @db.Uuid
+  usuario_id  String?  @db.Uuid
+  data_hora   DateTime @default(now()) @db.Timestamp(6)
+  tipo_evento String   @db.VarChar(50)
+  descricao   String
+  motivo      String?
+  os          os       @relation(fields: [os_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario     usuario? @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([os_id], map: "ix_historico_evento_os_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model log_alteracao {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  os_id          String   @db.Uuid
+  usuario_id     String   @db.Uuid
+  data_hora      DateTime @default(now()) @db.Timestamp(6)
+  campo_alterado String   @db.VarChar(100)
+  valor_anterior String?
+  valor_novo     String?
+  os             os       @relation(fields: [os_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario        usuario  @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([os_id], map: "ix_log_alteracao_os_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model os {
+  id                     String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  os_externa_id          String              @unique @db.VarChar(50)
+  cliente_nome           String              @db.VarChar(200)
+  contrato_id            String              @db.VarChar(50)
+  bairro                 String?             @db.VarChar(100)
+  endereco               String              @db.VarChar(300)
+  data_abertura          DateTime            @db.Date
+  status                 status_os           @default(PENDENTE)
+  data_entrada_status    DateTime            @default(now()) @db.Timestamp(6)
+  data_ultima_interacao  DateTime?           @db.Timestamp(6)
+  qtd_tentativas_contato Int                 @default(0)
+  criado_em              DateTime            @default(now()) @db.Timestamp(6)
+  atualizado_em          DateTime            @default(now()) @db.Timestamp(6)
+  agendamento            agendamento[]
+  historico_evento       historico_evento[]
+  log_alteracao          log_alteracao[]
+  tentativa_contato      tentativa_contato[]
+
+  @@index([data_entrada_status], map: "ix_os_data_entrada_status")
+  @@index([data_ultima_interacao], map: "ix_os_data_ultima_interacao")
+  @@index([status], map: "ix_os_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tentativa_contato {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  os_id      String        @db.Uuid
+  usuario_id String        @db.Uuid
+  data_hora  DateTime      @default(now()) @db.Timestamp(6)
+  canal      canal_contato
+  resultado  String        @db.VarChar(150)
+  observacao String?
+  os         os            @relation(fields: [os_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario    usuario       @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([os_id], map: "ix_tentativa_contato_os_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model usuario {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome              String              @db.VarChar(150)
+  login             String              @unique @db.VarChar(100)
+  senha_hash        String              @db.VarChar(255)
+  ativo             Boolean             @default(true)
+  criado_em         DateTime            @default(now()) @db.Timestamp(6)
+  atualizado_em     DateTime            @default(now()) @db.Timestamp(6)
+  agendamento       agendamento[]
+  historico_evento  historico_evento[]
+  log_alteracao     log_alteracao[]
+  tentativa_contato tentativa_contato[]
+}
+
+enum abrangencia_feriado {
+  NACIONAL
+  ESTADUAL
+  MUNICIPAL
+  FACULTATIVO
+}
+
+enum canal_contato {
+  TELEFONE
+  WHATSAPP
+  EMAIL
+  OUTRO
+}
+
+enum status_os {
+  PENDENTE
+  EM_CONTATO
+  AGUARDANDO
+  ATRASADA
+  EM_EXTRAVIO
+  MULTA_GERADA
+  EM_REATIVACAO
+  REATIVACAO_CONCLUIDA
+  RETIRADA_OK
+}
+
+enum tipo_motivo_reagendamento {
+  CLIENTE
+  EMPRESA
 }
