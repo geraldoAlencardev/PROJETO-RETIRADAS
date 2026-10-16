@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { buscarOsPorId, contarPorStatus, listarOs } from './os.repository.js';
+import { buscarOsPorId, contarPorStatus, listarHistorico, listarOs } from './os.repository.js';
+import { executarEvento, OsNaoEncontradaError, TransicaoInvalidaError } from './os.service.js';
 import { STATUS_OS } from './status.js';
 
 // Aceita ?status=PENDENTE,ATRASADA e também ?status=PENDENTE&status=ATRASADA
@@ -23,6 +24,21 @@ const listaQuery = z.object({
 });
 
 const idParams = z.object({ id: z.string().uuid() });
+
+// Ações que mudam o status e não precisam de dados adicionais além do motivo.
+// (Tentativa de contato, agendamento e reagendamento terão rotas próprias; Atrasada e o
+// timeout da reativação serão automáticos.)
+const ACOES = [
+  'CONCLUIR_RETIRADA', // T09
+  'GERAR_MULTA', // T10
+  'INICIAR_REATIVACAO', // T11
+  'CONCLUIR_REATIVACAO', // T13
+] as const;
+
+const acaoBody = z.object({
+  acao: z.enum(ACOES),
+  motivo: z.string().trim().max(500).optional(),
+});
 
 export async function osRoutes(app: FastifyInstance) {
   // Todas as rotas deste módulo exigem sessão.
@@ -58,5 +74,47 @@ export async function osRoutes(app: FastifyInstance) {
     const os = await buscarOsPorId(parsed.data.id);
     if (!os) return reply.code(404).send({ erro: 'OS não encontrada' });
     return os;
+  });
+
+  // Linha do tempo da OS (RF25).
+  app.get('/os/:id/historico', async (req, reply) => {
+    const parsed = idParams.safeParse(req.params);
+    if (!parsed.success) return reply.code(400).send({ erro: 'Identificador inválido' });
+
+    const os = await buscarOsPorId(parsed.data.id);
+    if (!os) return reply.code(404).send({ erro: 'OS não encontrada' });
+
+    return { itens: await listarHistorico(parsed.data.id) };
+  });
+
+  // Ações manuais que mudam o status, sempre validadas pela máquina de estados.
+  app.post('/os/:id/acoes', async (req, reply) => {
+    const params = idParams.safeParse(req.params);
+    if (!params.success) return reply.code(400).send({ erro: 'Identificador inválido' });
+
+    const body = acaoBody.safeParse(req.body);
+    if (!body.success) {
+      return reply
+        .code(400)
+        .send({ erro: 'Corpo inválido', detalhes: body.error.flatten().fieldErrors });
+    }
+
+    try {
+      const transicao = await executarEvento({
+        osId: params.data.id,
+        usuarioId: req.usuario!.id,
+        evento: { tipo: body.data.acao },
+        motivo: body.data.motivo || undefined,
+      });
+      return { transicao, os: await buscarOsPorId(params.data.id) };
+    } catch (erro) {
+      if (erro instanceof OsNaoEncontradaError) {
+        return reply.code(404).send({ erro: 'OS não encontrada' });
+      }
+      if (erro instanceof TransicaoInvalidaError) {
+        return reply.code(409).send({ erro: erro.message });
+      }
+      throw erro;
+    }
   });
 }

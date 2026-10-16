@@ -68,23 +68,25 @@ model log_alteracao {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model os {
-  id                     String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  os_externa_id          String              @unique @db.VarChar(50)
-  cliente_nome           String              @db.VarChar(200)
-  contrato_id            String              @db.VarChar(50)
-  bairro                 String?             @db.VarChar(100)
-  endereco               String              @db.VarChar(300)
-  data_abertura          DateTime            @db.Date
-  status                 status_os           @default(PENDENTE)
-  data_entrada_status    DateTime            @default(now()) @db.Timestamp(6)
-  data_ultima_interacao  DateTime?           @db.Timestamp(6)
-  qtd_tentativas_contato Int                 @default(0)
-  criado_em              DateTime            @default(now()) @db.Timestamp(6)
-  atualizado_em          DateTime            @default(now()) @db.Timestamp(6)
-  agendamento            agendamento[]
-  historico_evento       historico_evento[]
-  log_alteracao          log_alteracao[]
-  tentativa_contato      tentativa_contato[]
+  id                         String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  os_externa_id              String              @unique @db.VarChar(50)
+  cliente_nome               String              @db.VarChar(200)
+  contrato_id                String              @db.VarChar(50)
+  bairro                     String?             @db.VarChar(100)
+  endereco                   String              @db.VarChar(300)
+  data_abertura              DateTime            @db.Date
+  status                     status_os           @default(PENDENTE)
+  data_entrada_status        DateTime            @default(now()) @db.Timestamp(6)
+  data_ultima_interacao      DateTime?           @db.Timestamp(6)
+  qtd_tentativas_contato     Int                 @default(0)
+  criado_em                  DateTime            @default(now()) @db.Timestamp(6)
+  atualizado_em              DateTime            @default(now()) @db.Timestamp(6)
+  qtd_tentativas_sem_sucesso Int                 @default(0)
+  qtd_falhas_ciclo           Int                 @default(0)
+  agendamento                agendamento[]
+  historico_evento           historico_evento[]
+  log_alteracao              log_alteracao[]
+  tentativa_contato          tentativa_contato[]
 
   @@index([data_entrada_status], map: "ix_os_data_entrada_status")
   @@index([data_ultima_interacao], map: "ix_os_data_ultima_interacao")
@@ -98,8 +100,8 @@ model tentativa_contato {
   usuario_id String        @db.Uuid
   data_hora  DateTime      @default(now()) @db.Timestamp(6)
   canal      canal_contato
-  resultado  String        @db.VarChar(150)
   observacao String?
+  sucesso    Boolean
   os         os            @relation(fields: [os_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   usuario    usuario       @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -138,7 +140,7 @@ enum canal_contato {
 enum status_os {
   PENDENTE
   EM_CONTATO
-  AGUARDANDO
+  AGENDADA
   ATRASADA
   EM_EXTRAVIO
   MULTA_GERADA

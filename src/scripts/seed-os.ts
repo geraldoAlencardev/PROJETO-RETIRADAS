@@ -10,7 +10,8 @@ type Canal = 'TELEFONE' | 'WHATSAPP' | 'EMAIL' | 'OUTRO';
 interface TentativaSeed {
   diasAtras: number;
   canal: Canal;
-  resultado: string;
+  sucesso: boolean;
+  observacao: string;
 }
 
 interface OsSeed {
@@ -60,7 +61,7 @@ const OS_FICTICIAS: OsSeed[] = [
     aberturaDiasAtras: 8,
     status: 'EM_CONTATO',
     entrouNoStatusDiasAtras: 2,
-    tentativas: [{ diasAtras: 2, canal: 'WHATSAPP', resultado: SEM_RESPOSTA }],
+    tentativas: [{ diasAtras: 2, canal: 'WHATSAPP', sucesso: false, observacao: SEM_RESPOSTA }],
   },
   {
     externa: 'OS-9004',
@@ -72,8 +73,8 @@ const OS_FICTICIAS: OsSeed[] = [
     status: 'EM_CONTATO',
     entrouNoStatusDiasAtras: 4,
     tentativas: [
-      { diasAtras: 4, canal: 'TELEFONE', resultado: SEM_RESPOSTA },
-      { diasAtras: 1, canal: 'WHATSAPP', resultado: SEM_RESPOSTA },
+      { diasAtras: 4, canal: 'TELEFONE', sucesso: false, observacao: SEM_RESPOSTA },
+      { diasAtras: 1, canal: 'WHATSAPP', sucesso: false, observacao: SEM_RESPOSTA },
     ],
   },
   {
@@ -83,11 +84,11 @@ const OS_FICTICIAS: OsSeed[] = [
     bairro: 'Parque Verde',
     endereco: 'Rua das Mangueiras, 410',
     aberturaDiasAtras: 7,
-    status: 'AGUARDANDO',
+    status: 'AGENDADA',
     entrouNoStatusDiasAtras: 1,
     tentativas: [
-      { diasAtras: 3, canal: 'TELEFONE', resultado: SEM_RESPOSTA },
-      { diasAtras: 1, canal: 'TELEFONE', resultado: AGENDOU },
+      { diasAtras: 3, canal: 'TELEFONE', sucesso: false, observacao: SEM_RESPOSTA },
+      { diasAtras: 1, canal: 'TELEFONE', sucesso: true, observacao: AGENDOU },
     ],
     agendamento: { diasAFrente: 3, horario: '14:00' },
   },
@@ -98,9 +99,9 @@ const OS_FICTICIAS: OsSeed[] = [
     bairro: 'Vila de Abrantes',
     endereco: 'Rua da Praia, 58',
     aberturaDiasAtras: 5,
-    status: 'AGUARDANDO',
+    status: 'AGENDADA',
     entrouNoStatusDiasAtras: 2,
-    tentativas: [{ diasAtras: 2, canal: 'WHATSAPP', resultado: AGENDOU }],
+    tentativas: [{ diasAtras: 2, canal: 'WHATSAPP', sucesso: true, observacao: AGENDOU }],
     agendamento: { diasAFrente: 1, horario: '09:30' },
   },
   {
@@ -112,7 +113,7 @@ const OS_FICTICIAS: OsSeed[] = [
     aberturaDiasAtras: 22,
     status: 'ATRASADA',
     entrouNoStatusDiasAtras: 5,
-    tentativas: [{ diasAtras: 14, canal: 'TELEFONE', resultado: SEM_RESPOSTA }],
+    tentativas: [{ diasAtras: 14, canal: 'TELEFONE', sucesso: false, observacao: SEM_RESPOSTA }],
   },
   {
     externa: 'OS-9008',
@@ -134,9 +135,9 @@ const OS_FICTICIAS: OsSeed[] = [
     status: 'EM_EXTRAVIO',
     entrouNoStatusDiasAtras: 3,
     tentativas: [
-      { diasAtras: 10, canal: 'TELEFONE', resultado: SEM_RESPOSTA },
-      { diasAtras: 6, canal: 'WHATSAPP', resultado: DESLIGADO },
-      { diasAtras: 3, canal: 'TELEFONE', resultado: SEM_RESPOSTA },
+      { diasAtras: 10, canal: 'TELEFONE', sucesso: false, observacao: SEM_RESPOSTA },
+      { diasAtras: 6, canal: 'WHATSAPP', sucesso: false, observacao: DESLIGADO },
+      { diasAtras: 3, canal: 'TELEFONE', sucesso: false, observacao: SEM_RESPOSTA },
     ],
   },
   {
@@ -149,9 +150,9 @@ const OS_FICTICIAS: OsSeed[] = [
     status: 'MULTA_GERADA',
     entrouNoStatusDiasAtras: 12,
     tentativas: [
-      { diasAtras: 30, canal: 'TELEFONE', resultado: SEM_RESPOSTA },
-      { diasAtras: 26, canal: 'TELEFONE', resultado: DESLIGADO },
-      { diasAtras: 20, canal: 'EMAIL', resultado: SEM_RESPOSTA },
+      { diasAtras: 30, canal: 'TELEFONE', sucesso: false, observacao: SEM_RESPOSTA },
+      { diasAtras: 26, canal: 'TELEFONE', sucesso: false, observacao: DESLIGADO },
+      { diasAtras: 20, canal: 'EMAIL', sucesso: false, observacao: SEM_RESPOSTA },
     ],
   },
   {
@@ -164,9 +165,9 @@ const OS_FICTICIAS: OsSeed[] = [
     status: 'EM_REATIVACAO',
     entrouNoStatusDiasAtras: 2,
     tentativas: [
-      { diasAtras: 25, canal: 'TELEFONE', resultado: SEM_RESPOSTA },
-      { diasAtras: 21, canal: 'WHATSAPP', resultado: SEM_RESPOSTA },
-      { diasAtras: 18, canal: 'TELEFONE', resultado: DESLIGADO },
+      { diasAtras: 25, canal: 'TELEFONE', sucesso: false, observacao: SEM_RESPOSTA },
+      { diasAtras: 21, canal: 'WHATSAPP', sucesso: false, observacao: SEM_RESPOSTA },
+      { diasAtras: 18, canal: 'TELEFONE', sucesso: false, observacao: DESLIGADO },
     ],
   },
   {
@@ -179,9 +180,9 @@ const OS_FICTICIAS: OsSeed[] = [
     status: 'REATIVACAO_CONCLUIDA',
     entrouNoStatusDiasAtras: 4,
     tentativas: [
-      { diasAtras: 38, canal: 'TELEFONE', resultado: SEM_RESPOSTA },
-      { diasAtras: 33, canal: 'TELEFONE', resultado: SEM_RESPOSTA },
-      { diasAtras: 29, canal: 'WHATSAPP', resultado: DESLIGADO },
+      { diasAtras: 38, canal: 'TELEFONE', sucesso: false, observacao: SEM_RESPOSTA },
+      { diasAtras: 33, canal: 'TELEFONE', sucesso: false, observacao: SEM_RESPOSTA },
+      { diasAtras: 29, canal: 'WHATSAPP', sucesso: false, observacao: DESLIGADO },
     ],
   },
   {
@@ -194,8 +195,8 @@ const OS_FICTICIAS: OsSeed[] = [
     status: 'RETIRADA_OK',
     entrouNoStatusDiasAtras: 6,
     tentativas: [
-      { diasAtras: 20, canal: 'TELEFONE', resultado: SEM_RESPOSTA },
-      { diasAtras: 15, canal: 'TELEFONE', resultado: AGENDOU },
+      { diasAtras: 20, canal: 'TELEFONE', sucesso: false, observacao: SEM_RESPOSTA },
+      { diasAtras: 15, canal: 'TELEFONE', sucesso: true, observacao: AGENDOU },
     ],
     agendamento: { diasAFrente: -7, horario: '10:00' },
   },
@@ -247,12 +248,13 @@ async function main() {
                 'OS recebida do sistema externo')`,
       ...tentativas.map(
         (t) => prisma.$executeRaw`
-          INSERT INTO tentativa_contato (os_id, usuario_id, data_hora, canal, resultado)
+          INSERT INTO tentativa_contato (os_id, usuario_id, data_hora, canal, sucesso, observacao)
           VALUES ((SELECT id FROM os WHERE os_externa_id = ${os.externa}),
                   ${usuarioId}::uuid,
                   now() - (${t.diasAtras}::int * interval '1 day'),
                   ${t.canal}::canal_contato,
-                  ${t.resultado})`,
+                  ${t.sucesso}::boolean,
+                  ${t.observacao})`,
       ),
       ...(os.agendamento
         ? [

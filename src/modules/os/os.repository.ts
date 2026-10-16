@@ -125,3 +125,28 @@ export async function buscarOsPorId(id: string): Promise<OsDetalhe | null> {
 
   return { ...os, agendamentoVigente: agendamentos[0] ?? null };
 }
+
+export interface EventoHistorico {
+  id: string;
+  dataHora: Date;
+  tipoEvento: string;
+  descricao: string;
+  motivo: string | null;
+  /** Nulo em eventos automáticos do sistema. */
+  usuarioNome: string | null;
+}
+
+/** Linha do tempo da OS (RF25), do evento mais antigo para o mais recente. */
+export async function listarHistorico(osId: string): Promise<EventoHistorico[]> {
+  return prisma.$queryRaw<EventoHistorico[]>`
+    SELECT h.id,
+           h.data_hora    AS "dataHora",
+           h.tipo_evento  AS "tipoEvento",
+           h.descricao,
+           h.motivo,
+           u.nome         AS "usuarioNome"
+      FROM historico_evento h
+      LEFT JOIN usuario u ON u.id = h.usuario_id
+     WHERE h.os_id = ${osId}::uuid
+     ORDER BY h.data_hora, h.id`;
+}

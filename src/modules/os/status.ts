@@ -2,7 +2,7 @@
 export const STATUS_OS = [
   'PENDENTE',
   'EM_CONTATO',
-  'AGUARDANDO',
+  'AGENDADA',
   'ATRASADA',
   'EM_EXTRAVIO',
   'MULTA_GERADA',
