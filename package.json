@@ -16,7 +16,8 @@
     "db:reset": "docker compose down -v && docker compose up -d",
     "db:pull": "prisma db pull && prisma generate",
     "db:generate": "prisma generate",
-    "user:create": "tsx src/scripts/criar-usuario.ts"
+    "user:create": "tsx src/scripts/criar-usuario.ts",
+    "seed:os": "tsx src/scripts/seed-os.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^9.4.0",
