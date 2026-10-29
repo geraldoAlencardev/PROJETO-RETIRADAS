@@ -11,15 +11,31 @@ import { STATUS_OS, type StatusOs } from './status.js';
 export interface OsLinha {
   id: string;
   osExternaId: string;
-  clienteNome: string;
+  protocoloExterno: string | null;
+  /** Nulo enquanto o nome não vier do cadastro de clientes do IXC. */
+  clienteNome: string | null;
+  clienteExternoId: string | null;
   contratoId: string;
   bairro: string | null;
   endereco: string;
+  referencia: string | null;
   dataAbertura: string;
   status: StatusOs;
+  /** Status do chamado no IXC (só consulta). */
+  statusExterno: string | null;
   dataEntradaStatus: Date;
   dataUltimaInteracao: Date | null;
   qtdTentativasContato: number;
+  /** Total acumulado de tentativas sem sucesso (nunca zera). */
+  qtdTentativasSemSucesso: number;
+  /** Falhas no ciclo atual; na 3ª a OS vai para Em extravio (RN02). */
+  qtdFalhasCiclo: number;
+  reagendamentosCliente: number;
+  reagendamentosEmpresa: number;
+  /** Data prevista do agendamento vigente ('YYYY-MM-DD'), se houver. */
+  dataPrevista: string | null;
+  horarioPrevisto: string | null;
+  atualizadoEm: Date;
 }
 
 export interface AgendamentoVigente {
@@ -48,15 +64,30 @@ export async function listarOs(filtro: FiltroOs): Promise<{ itens: OsLinha[]; to
     prisma.$queryRaw<OsLinha[]>`
       SELECT id,
              os_externa_id                          AS "osExternaId",
+             protocolo_externo                      AS "protocoloExterno",
              cliente_nome                           AS "clienteNome",
+             cliente_externo_id                     AS "clienteExternoId",
              contrato_id                            AS "contratoId",
              bairro,
              endereco,
+             referencia,
              to_char(data_abertura, 'YYYY-MM-DD')   AS "dataAbertura",
              status::text                           AS status,
+             status_externo                         AS "statusExterno",
              data_entrada_status                    AS "dataEntradaStatus",
              data_ultima_interacao                  AS "dataUltimaInteracao",
-             qtd_tentativas_contato                 AS "qtdTentativasContato"
+             qtd_tentativas_contato                 AS "qtdTentativasContato",
+             qtd_tentativas_sem_sucesso             AS "qtdTentativasSemSucesso",
+             qtd_falhas_ciclo                       AS "qtdFalhasCiclo",
+             (SELECT COUNT(*)::int FROM agendamento a
+               WHERE a.os_id = os.id AND a.tipo_motivo = 'CLIENTE') AS "reagendamentosCliente",
+             (SELECT COUNT(*)::int FROM agendamento a
+               WHERE a.os_id = os.id AND a.tipo_motivo = 'EMPRESA') AS "reagendamentosEmpresa",
+             (SELECT to_char(a.data_prevista, 'YYYY-MM-DD') FROM agendamento a
+               WHERE a.os_id = os.id AND a.vigente)             AS "dataPrevista",
+             (SELECT to_char(a.horario, 'HH24:MI') FROM agendamento a
+               WHERE a.os_id = os.id AND a.vigente)             AS "horarioPrevisto",
+             atualizado_em                          AS "atualizadoEm"
         FROM os
        WHERE (${statusCsv}::text IS NULL
               OR status::text = ANY (string_to_array(${statusCsv}::text, ',')))
@@ -64,6 +95,7 @@ export async function listarOs(filtro: FiltroOs): Promise<{ itens: OsLinha[]; to
               OR cliente_nome ILIKE ${busca}::text
               OR contrato_id ILIKE ${busca}::text
               OR os_externa_id ILIKE ${busca}::text
+              OR protocolo_externo ILIKE ${busca}::text
               OR bairro ILIKE ${busca}::text)
        ORDER BY data_abertura, os_externa_id
        LIMIT ${filtro.limite}::int OFFSET ${filtro.deslocamento}::int`,
@@ -76,6 +108,7 @@ export async function listarOs(filtro: FiltroOs): Promise<{ itens: OsLinha[]; to
               OR cliente_nome ILIKE ${busca}::text
               OR contrato_id ILIKE ${busca}::text
               OR os_externa_id ILIKE ${busca}::text
+              OR protocolo_externo ILIKE ${busca}::text
               OR bairro ILIKE ${busca}::text)`,
   ]);
 
@@ -85,6 +118,8 @@ export async function listarOs(filtro: FiltroOs): Promise<{ itens: OsLinha[]; to
 export async function contarPorStatus(): Promise<{
   total: number;
   porStatus: Record<StatusOs, number>;
+  /** Total de reagendamentos por quem motivou (RN04). */
+  reagendamentos: { cliente: number; empresa: number };
 }> {
   const linhas: { status: StatusOs; quantidade: number }[] = await prisma.$queryRaw`
     SELECT status::text AS status, COUNT(*)::int AS quantidade
@@ -96,22 +131,46 @@ export async function contarPorStatus(): Promise<{
   for (const linha of linhas) porStatus[linha.status] = linha.quantidade;
 
   const total = Object.values(porStatus).reduce((soma, n) => soma + n, 0);
-  return { total, porStatus };
+
+  const reag = await prisma.$queryRaw<{ tipo: 'CLIENTE' | 'EMPRESA'; quantidade: number }[]>`
+    SELECT tipo_motivo::text AS tipo, COUNT(*)::int AS quantidade
+      FROM agendamento
+     WHERE tipo_motivo IS NOT NULL
+     GROUP BY tipo_motivo`;
+  const reagendamentos = { cliente: 0, empresa: 0 };
+  for (const r of reag) reagendamentos[r.tipo === 'CLIENTE' ? 'cliente' : 'empresa'] = r.quantidade;
+
+  return { total, porStatus, reagendamentos };
 }
 
 export async function buscarOsPorId(id: string): Promise<OsDetalhe | null> {
   const linhas = await prisma.$queryRaw<OsLinha[]>`
     SELECT id,
            os_externa_id                          AS "osExternaId",
+           protocolo_externo                      AS "protocoloExterno",
            cliente_nome                           AS "clienteNome",
+           cliente_externo_id                     AS "clienteExternoId",
            contrato_id                            AS "contratoId",
            bairro,
            endereco,
+           referencia,
            to_char(data_abertura, 'YYYY-MM-DD')   AS "dataAbertura",
            status::text                           AS status,
+           status_externo                         AS "statusExterno",
            data_entrada_status                    AS "dataEntradaStatus",
            data_ultima_interacao                  AS "dataUltimaInteracao",
-           qtd_tentativas_contato                 AS "qtdTentativasContato"
+           qtd_tentativas_contato                 AS "qtdTentativasContato",
+           qtd_tentativas_sem_sucesso             AS "qtdTentativasSemSucesso",
+           qtd_falhas_ciclo                       AS "qtdFalhasCiclo",
+           (SELECT COUNT(*)::int FROM agendamento a
+             WHERE a.os_id = os.id AND a.tipo_motivo = 'CLIENTE') AS "reagendamentosCliente",
+           (SELECT COUNT(*)::int FROM agendamento a
+             WHERE a.os_id = os.id AND a.tipo_motivo = 'EMPRESA') AS "reagendamentosEmpresa",
+           (SELECT to_char(a.data_prevista, 'YYYY-MM-DD') FROM agendamento a
+             WHERE a.os_id = os.id AND a.vigente)             AS "dataPrevista",
+           (SELECT to_char(a.horario, 'HH24:MI') FROM agendamento a
+             WHERE a.os_id = os.id AND a.vigente)             AS "horarioPrevisto",
+           atualizado_em                          AS "atualizadoEm"
       FROM os
      WHERE id = ${id}::uuid`;
   const os = linhas[0];

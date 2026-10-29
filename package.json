@@ -17,7 +17,9 @@
     "db:pull": "prisma db pull && prisma generate",
     "db:generate": "prisma generate",
     "user:create": "tsx src/scripts/criar-usuario.ts",
-    "seed:os": "tsx src/scripts/seed-os.ts"
+    "seed:os": "tsx src/scripts/seed-os.ts",
+    "ixc:importar": "tsx src/scripts/importar-ixc.ts",
+    "prazos:processar": "tsx src/scripts/processar-prazos.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^9.4.0",

@@ -37,3 +37,43 @@ export async function criarUsuario(dados: {
     RETURNING id`;
   return rows[0]!;
 }
+
+/** Dados públicos do usuário (sem o hash da senha). */
+export interface UsuarioPublico {
+  id: string;
+  nome: string;
+  login: string;
+  ativo: boolean;
+  criadoEm: Date;
+  atualizadoEm: Date;
+}
+
+export async function listarUsuarios(): Promise<UsuarioPublico[]> {
+  return prisma.$queryRaw<UsuarioPublico[]>`
+    SELECT id, nome, login, ativo, criado_em AS "criadoEm", atualizado_em AS "atualizadoEm"
+      FROM usuario
+     ORDER BY nome, login`;
+}
+
+export async function buscarUsuarioPublico(id: string): Promise<UsuarioPublico | null> {
+  const rows = await prisma.$queryRaw<UsuarioPublico[]>`
+    SELECT id, nome, login, ativo, criado_em AS "criadoEm", atualizado_em AS "atualizadoEm"
+      FROM usuario
+     WHERE id = ${id}::uuid`;
+  return rows[0] ?? null;
+}
+
+/** Atualiza só os campos informados (undefined = não mexe). Retorna false se o usuário não existe. */
+export async function atualizarUsuario(
+  id: string,
+  dados: { nome?: string; senhaHash?: string; ativo?: boolean },
+): Promise<boolean> {
+  const alteradas = await prisma.$executeRaw`
+    UPDATE usuario
+       SET nome          = COALESCE(${dados.nome ?? null}, nome),
+           senha_hash    = COALESCE(${dados.senhaHash ?? null}, senha_hash),
+           ativo         = COALESCE(${dados.ativo ?? null}::boolean, ativo),
+           atualizado_em = now()
+     WHERE id = ${id}::uuid`;
+  return alteradas > 0;
+}

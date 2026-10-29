@@ -55,13 +55,13 @@ model historico_evento {
 model log_alteracao {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   os_id          String   @db.Uuid
-  usuario_id     String   @db.Uuid
+  usuario_id     String?  @db.Uuid
   data_hora      DateTime @default(now()) @db.Timestamp(6)
   campo_alterado String   @db.VarChar(100)
   valor_anterior String?
   valor_novo     String?
   os             os       @relation(fields: [os_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario        usuario  @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario        usuario? @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([os_id], map: "ix_log_alteracao_os_id")
 }
@@ -70,7 +70,7 @@ model log_alteracao {
 model os {
   id                         String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   os_externa_id              String              @unique @db.VarChar(50)
-  cliente_nome               String              @db.VarChar(200)
+  cliente_nome               String?             @db.VarChar(200)
   contrato_id                String              @db.VarChar(50)
   bairro                     String?             @db.VarChar(100)
   endereco                   String              @db.VarChar(300)
@@ -83,6 +83,12 @@ model os {
   atualizado_em              DateTime            @default(now()) @db.Timestamp(6)
   qtd_tentativas_sem_sucesso Int                 @default(0)
   qtd_falhas_ciclo           Int                 @default(0)
+  cliente_externo_id         String?             @db.VarChar(50)
+  protocolo_externo          String?             @db.VarChar(50)
+  referencia                 String?             @db.VarChar(300)
+  status_externo             String?             @db.VarChar(5)
+  ultima_atualizacao_externa DateTime?           @db.Timestamp(6)
+  sincronizado_em            DateTime?           @db.Timestamp(6)
   agendamento                agendamento[]
   historico_evento           historico_evento[]
   log_alteracao              log_alteracao[]
@@ -91,6 +97,7 @@ model os {
   @@index([data_entrada_status], map: "ix_os_data_entrada_status")
   @@index([data_ultima_interacao], map: "ix_os_data_ultima_interacao")
   @@index([status], map: "ix_os_status")
+  @@index([status_externo], map: "ix_os_status_externo")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -120,7 +127,29 @@ model usuario {
   agendamento       agendamento[]
   historico_evento  historico_evento[]
   log_alteracao     log_alteracao[]
+  sincronizacao     sincronizacao[]
   tentativa_contato tentativa_contato[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sincronizacao {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id    String    @db.Uuid
+  iniciada_em   DateTime  @default(now()) @db.Timestamp(6)
+  finalizada_em DateTime? @db.Timestamp(6)
+  situacao      String    @default("EM_ANDAMENTO") @db.VarChar(20)
+  paginas       Int       @default(0)
+  recebidos     Int       @default(0)
+  criadas       Int       @default(0)
+  atualizadas   Int       @default(0)
+  finalizadas   Int       @default(0)
+  ignoradas     Int       @default(0)
+  com_erro      Int       @default(0)
+  erro          String?
+  usuario       usuario   @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([iniciada_em], map: "ix_sincronizacao_iniciada_em")
 }
 
 enum abrangencia_feriado {

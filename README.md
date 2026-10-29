@@ -28,11 +28,51 @@ O **DDL em `db/init/` é a fonte da verdade**. Não use `prisma migrate dev`.
 
 `npm test` · `npm run lint` · `npm run format` · `npm run typecheck`
 
+- `npm run user:create -- --login admin --nome "Administrador"` — cria um usuário
+- `npm run seed:os` — OS fictícias em todos os status (só desenvolvimento)
+- `npm run ixc:importar -- arquivo.json` — importa OS de um JSON no formato do IXC, sem chamar o IXC
+- `npm run prazos:processar` — roda uma vez a rotina de prazos
+
+## Endpoints
+
+Todos exigem sessão (cookie do `/auth/login`), exceto `/health` e `/auth/login`.
+
+| Método e rota                                                                     | O que faz                                                                         |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `POST /auth/login` · `POST /auth/logout` · `GET /auth/me`                         | Sessão                                                                            |
+| `GET /usuarios` · `POST /usuarios` · `PATCH /usuarios/:id`                        | Usuários (perfil único, RN05)                                                     |
+| `GET /os` · `GET /os/resumo` · `GET /os/:id` · `GET /os/:id/historico`            | Fila, contagem por status, detalhe e linha do tempo                               |
+| `POST /os/:id/acoes`                                                              | Concluir retirada (T09), gerar multa (T10), iniciar/concluir reativação (T11/T13) |
+| `POST /os/:id/tentativas` · `GET /os/:id/tentativas`                              | Tentativas de contato (RF10–RF12)                                                 |
+| `POST /os/:id/agendamentos` · `GET /os/:id/agendamentos`                          | Agendar (T03) / reagendar (T08) e histórico de datas (RN04)                       |
+| `POST /os/:id/agendamentos/reverter`                                              | Reverter agendamento (T07)                                                        |
+| `POST /sincronizacoes` · `GET /sincronizacoes/ultima` · `GET /sincronizacoes/:id` | Botão "Sincronizar agora" com o IXC                                               |
+
+## Integração com o IXC
+
+O IXC é **apenas origem de dados**: o sistema só lê (GET) e **nunca envia nada** ao IXC.
+
+- As OS vêm de `su_oss_chamado` com `id_assunto = IXC_ID_ASSUNTO_RETIRADA` (9), incluindo as finalizadas.
+- OS nova → entra em Pendente. OS nova já finalizada (`F`) → não entra.
+- OS existente → só os campos de origem são atualizados (RN08); cada mudança vai para o `log_alteracao`.
+- OS existente que ficou `F` no IXC → Retirada OK (T16) a partir de qualquer status não final.
+- A sincronização roda só sob demanda, uma por vez, com intervalo mínimo
+  (`SINCRONIZACAO_INTERVALO_MIN_MINUTOS`), páginas de 100 lidas uma de cada vez e parada no primeiro erro.
+- **Pendente:** o cliente HTTP do IXC (a "fonte"). Até lá, `POST /sincronizacoes` responde 503.
+  O chamado do IXC não traz o nome do cliente; `cliente_nome` fica vazio até existir essa consulta.
+
+## Rotina de prazos
+
+A cada `ROTINA_PRAZOS_MINUTOS` (padrão 60; 0 desliga) o servidor aplica os eventos automáticos:
+Atrasada após 5 dias úteis sem interação (T02/T05, RN03) e fim da reativação após 5 dias úteis
+(T12, RN11). Dias úteis excluem fins de semana e os feriados da tabela `feriado`.
+
 ## Estrutura
 
 - `db/init/` — DDL (SQL) aplicado ao banco na criação
 - `prisma/schema.prisma` — gerado por introspecção
 - `src/config/` — variáveis de ambiente (validadas com zod)
 - `src/shared/` — Prisma client e utilitários comuns
-- `src/modules/` — `os`, `contato`, `agendamento`, `historico`, `usuarios`, `feriado`
-  (hoje implementados: `feriado` — dias úteis, base de RN03/RN11 — e `health`)
+- `src/modules/` — `os` (fila, máquina de estados, ações), `contato`, `agendamento`, `prazos`,
+  `integracao-ixc`, `usuarios` (autenticação e gestão), `feriado` (dias úteis) e `health`
+- `src/scripts/` — scripts de linha de comando (usuário, seed, importação, prazos)

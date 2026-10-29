@@ -23,9 +23,10 @@ export interface TransicaoAplicada {
   codigo: string | null;
 }
 
-interface PedidoEvento {
+export interface PedidoEvento {
   osId: string;
-  usuarioId: string;
+  /** Nulo em eventos automáticos do sistema (sincronização com o IXC, prazos). */
+  usuarioId: string | null;
   evento: EventoOs;
   /** Justificativa opcional, gravada no histórico. */
   motivo?: string;

@@ -123,6 +123,7 @@ describe('status finais (T14)', () => {
     { tipo: 'INICIAR_REATIVACAO' },
     { tipo: 'CONCLUIR_REATIVACAO' },
     { tipo: 'EXPIRAR_REATIVACAO' },
+    { tipo: 'FINALIZAR_NO_IXC' },
   ];
 
   it('são exatamente Retirada OK, Reativação concluída e Multa gerada', () => {
@@ -136,6 +137,21 @@ describe('status finais (T14)', () => {
       expect(decidirTransicao(status, evento)).toMatchObject({ ok: false });
     }
   });
+});
+
+describe('finalização no IXC (T16)', () => {
+  it.each(STATUS_OS.filter((s) => !STATUS_FINAIS.includes(s)).map((s) => [s]))(
+    'leva %s para Retirada OK',
+    (status) => {
+      expect(decidirTransicao(status, { tipo: 'FINALIZAR_NO_IXC' })).toEqual({
+        ok: true,
+        de: status,
+        para: 'RETIRADA_OK',
+        codigo: 'T16',
+        reiniciaCicloFalhas: false,
+      });
+    },
+  );
 });
 
 describe('reinício do contador oculto de falhas', () => {

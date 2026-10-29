@@ -26,8 +26,8 @@ const listaQuery = z.object({
 const idParams = z.object({ id: z.string().uuid() });
 
 // Ações que mudam o status e não precisam de dados adicionais além do motivo.
-// (Tentativa de contato, agendamento e reagendamento terão rotas próprias; Atrasada e o
-// timeout da reativação serão automáticos.)
+// (Tentativa de contato e agendamento têm rotas próprias; Atrasada e o timeout da reativação
+// são aplicados pela rotina de prazos; a finalização no IXC, pela sincronização.)
 const ACOES = [
   'CONCLUIR_RETIRADA', // T09
   'GERAR_MULTA', // T10

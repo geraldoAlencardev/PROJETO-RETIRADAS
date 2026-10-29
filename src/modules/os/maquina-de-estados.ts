@@ -17,7 +17,9 @@ export type EventoOs =
   | { tipo: 'GERAR_MULTA' }
   | { tipo: 'INICIAR_REATIVACAO' }
   | { tipo: 'CONCLUIR_REATIVACAO' }
-  | { tipo: 'EXPIRAR_REATIVACAO' };
+  | { tipo: 'EXPIRAR_REATIVACAO' }
+  // Chamado finalizado (status F) no IXC, vindo da sincronização.
+  | { tipo: 'FINALIZAR_NO_IXC' };
 
 export type TipoEvento = EventoOs['tipo'];
 
@@ -67,6 +69,18 @@ const REGRAS: Record<Exclude<TipoEvento, 'TENTATIVA_CONTATO'>, RegraSimples> = {
   CONCLUIR_REATIVACAO: { para: 'REATIVACAO_CONCLUIDA', origens: { EM_REATIVACAO: 'T13' } },
   // T12: timeout de 5 dias úteis (RN11); volta para Pendente e recomeça o ciclo de falhas.
   EXPIRAR_REATIVACAO: { para: 'PENDENTE', origens: { EM_REATIVACAO: 'T12' } },
+  // T16: chamado finalizado no IXC leva a Retirada OK a partir de qualquer status não final.
+  FINALIZAR_NO_IXC: {
+    para: 'RETIRADA_OK',
+    origens: {
+      PENDENTE: 'T16',
+      EM_CONTATO: 'T16',
+      AGENDADA: 'T16',
+      ATRASADA: 'T16',
+      EM_EXTRAVIO: 'T16',
+      EM_REATIVACAO: 'T16',
+    },
+  },
 };
 
 const ORIGENS_TENTATIVA: readonly StatusOs[] = ['PENDENTE', 'EM_CONTATO', 'ATRASADA'];
